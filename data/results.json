@@ -172,8 +172,43 @@
     "category_id": "f2650235-0fb0-45e7-8053-2190e8e8d6ed",
     "category_name": "ข้อมูลร้าน",
     "started_at": "2026-05-28T09:10:28.393Z",
-    "completed_at": null,
-    "status": "running",
-    "scenarios": []
+    "completed_at": "2026-05-28T09:11:28.248Z",
+    "status": "fail",
+    "scenarios": [
+      {
+        "scenario_id": "88bea88f-a577-41fd-b1a7-47b307a01d84",
+        "scenario_name": "ชื่อร้าน",
+        "run_index": 0,
+        "status": "fail",
+        "steps": [
+          {
+            "step_index": 0,
+            "message_sent": "",
+            "bot_response": "Could not find chat input",
+            "expected_keywords": [],
+            "matched_keywords": [],
+            "passed": false,
+            "duration_ms": 0
+          }
+        ]
+      },
+      {
+        "scenario_id": "88bea88f-a577-41fd-b1a7-47b307a01d84",
+        "scenario_name": "ชื่อร้าน",
+        "run_index": 1,
+        "status": "fail",
+        "steps": [
+          {
+            "step_index": 0,
+            "message_sent": "",
+            "bot_response": "Could not find chat input",
+            "expected_keywords": [],
+            "matched_keywords": [],
+            "passed": false,
+            "duration_ms": 0
+          }
+        ]
+      }
+    ]
   }
 ]
