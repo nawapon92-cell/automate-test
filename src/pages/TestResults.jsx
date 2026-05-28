@@ -197,6 +197,15 @@ export default function TestResults() {
                   </div>
                 )}
 
+                {!isRunning && catLogs.length > 0 && (
+                  <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-3">
+                    <p className="text-xs font-semibold text-red-700 mb-1">Log ล่าสุด</p>
+                    <p className="text-xs text-red-700 font-mono break-words">
+                      {catLogs[catLogs.length - 1]}
+                    </p>
+                  </div>
+                )}
+
                 {/* Results */}
                 {catResults.length > 0 && (
                   <div className="border-t border-gray-100 pt-4">

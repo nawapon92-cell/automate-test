@@ -1,6 +1,6 @@
 import { chromium } from 'playwright'
 import { v4 as uuidv4 } from 'uuid'
-import { writeFileSync, existsSync, mkdirSync, unlinkSync } from 'fs'
+import { existsSync, mkdirSync } from 'fs'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
 
@@ -17,13 +17,21 @@ function buildHtmlPage(settings) {
 </head>
 <body>
   <div id="bn-root"></div>
-  <script>window.onload = function() { if(window.BN) BN.init({ version: '1.0' }) }</script>
   <script>
     (function(d, s, id) {
       var js, bjs = d.getElementsByTagName(s)[0];
       if(d.getElementById(id)) return;
+      function initWhenReady(retry) {
+        var hasWidget = d.querySelector('.bn-customerchat');
+        if (window.BN && hasWidget) {
+          window.BN.init({ version: '1.0' });
+          return;
+        }
+        if (retry < 40) setTimeout(function() { initWhenReady(retry + 1); }, 250);
+      }
       js = d.createElement(s); js.id = id;
       js.src = 'https://console.botnoi.ai/customerchat/index.js';
+      js.onload = function() { initWhenReady(0); };
       bjs.parentNode.insertBefore(js, bjs);
     }(document, 'script', 'bn-jssdk'));
   </script>
@@ -41,12 +49,20 @@ function buildHtmlPage(settings) {
 }
 
 async function findChatInput(page) {
+  const inputSelectors = [
+    'input[type="text"]',
+    'textarea',
+    'input:not([type="hidden"])',
+    '[contenteditable="true"]',
+    '[role="textbox"]'
+  ]
+
   // First try to find iframes
   const frames = page.frames()
   for (const frame of frames) {
     if (frame === page.mainFrame()) continue
     try {
-      for (const sel of ['input[type="text"]', 'textarea', 'input:not([type="hidden"])']) {
+      for (const sel of inputSelectors) {
         const el = await frame.$(sel)
         if (el) return { frame, selector: sel, isFrame: true }
       }
@@ -59,7 +75,10 @@ async function findChatInput(page) {
     '.bn-chat-input input',
     '.bn-chat-input textarea',
     'input[class*="chat"]',
-    'textarea[class*="chat"]'
+    'textarea[class*="chat"]',
+    '[contenteditable="true"]',
+    '[role="textbox"]',
+    ...inputSelectors
   ]
 
   for (const sel of selectors) {
@@ -70,6 +89,119 @@ async function findChatInput(page) {
   }
 
   return null
+}
+
+async function clickChatToggle(page) {
+  const toggleSelectors = [
+    '.bn-chat-button',
+    '.bn-toggle',
+    '[class*="chat-button"]',
+    '[class*="chat-toggle"]',
+    '[class*="toggle"]',
+    'button[class*="bn"]',
+    '[aria-label*="chat" i]',
+    '[aria-label*="message" i]',
+    '[role="button"][aria-label*="chat" i]'
+  ]
+
+  const contexts = [page, ...page.frames().filter(f => f !== page.mainFrame())]
+  let clicked = false
+
+  for (const ctx of contexts) {
+    for (const sel of toggleSelectors) {
+      try {
+        const btn = await ctx.$(sel)
+        if (btn) {
+          await btn.click({ force: true })
+          clicked = true
+          await page.waitForTimeout(400)
+        }
+      } catch {}
+    }
+  }
+
+  return clicked
+}
+
+async function clickBottomRightFallback(page) {
+  try {
+    const vp = page.viewportSize()
+    if (!vp) return
+    // Many chat widgets place the launcher button in the bottom-right corner.
+    await page.mouse.click(Math.max(vp.width - 28, 1), Math.max(vp.height - 28, 1))
+  } catch {}
+}
+
+async function collectChatDiagnostics(page) {
+  const probes = [
+    'iframe',
+    'input[type="text"]',
+    'textarea',
+    '[contenteditable="true"]',
+    '[role="textbox"]',
+    '.bn-customerchat',
+    '.bn-chat-button',
+    '[class*="chat"]'
+  ]
+
+  const mainCounts = {}
+  for (const sel of probes) {
+    try {
+      mainCounts[sel] = await page.locator(sel).count()
+    } catch {
+      mainCounts[sel] = -1
+    }
+  }
+
+  const frames = page.frames().filter(f => f !== page.mainFrame())
+  const frameSummaries = []
+  for (const frame of frames.slice(0, 6)) {
+    const counts = {}
+    for (const sel of ['input[type="text"]', 'textarea', '[contenteditable="true"]', '[role="textbox"]', '[class*="chat"]']) {
+      try {
+        counts[sel] = await frame.locator(sel).count()
+      } catch {
+        counts[sel] = -1
+      }
+    }
+    frameSummaries.push({ url: frame.url(), counts })
+  }
+
+  return { mainCounts, frameCount: frames.length, frameSummaries }
+}
+
+async function waitForChatInput(page, timeoutMs = 25000) {
+  const start = Date.now()
+  let tries = 0
+
+  while (Date.now() - start < timeoutMs) {
+    tries++
+    const found = await findChatInput(page)
+    if (found) return found
+
+    await clickChatToggle(page)
+    if (tries % 3 === 0) await clickBottomRightFallback(page)
+
+    await page.waitForTimeout(1000)
+  }
+
+  return null
+}
+
+async function sendChatMessage(inputInfo, message) {
+  const inputEl = await inputInfo.frame.$(inputInfo.selector)
+  if (!inputEl) throw new Error('Chat input was not available when sending message')
+
+  await inputEl.click()
+
+  if (inputInfo.selector.includes('contenteditable')) {
+    await inputEl.fill('')
+    await inputInfo.frame.keyboard.type(message)
+  } else {
+    await inputEl.fill(message)
+  }
+
+  await inputInfo.frame.keyboard.press('Enter')
 }
 
 async function getLastBotMessage(frame) {
@@ -128,18 +260,32 @@ async function waitForBotResponse(frame, page, previousResponseText, timeoutMs =
   return ''
 }
 
+async function launchBrowser(onLog) {
+  try {
+    return await chromium.launch({ headless: true })
+  } catch (err) {
+    const msg = err?.message || String(err)
+    const isMissingBrowser = msg.includes('Executable doesn\'t exist')
+      || msg.includes('Please run the following command to download new browsers')
+
+    if (isMissingBrowser) {
+      throw new Error('Playwright Chromium ยังไม่ได้ติดตั้ง กรุณารันคำสั่ง "npx playwright install chromium" ในเทอร์มินัล แล้วลองใหม่อีกครั้ง')
+    }
+
+    throw err
+  }
+}
+
 export async function runCategoryTest(category, settings, onLog) {
   const allResults = []
-
+  const htmlContent = buildHtmlPage(settings)
   if (!existsSync(TMP_DIR)) mkdirSync(TMP_DIR, { recursive: true })
-  const htmlPath = join(TMP_DIR, `test-${Date.now()}.html`)
-  writeFileSync(htmlPath, buildHtmlPage(settings))
 
   onLog(`🚀 เริ่มทดสอบ Category: "${category.name}"`)
   onLog(`📋 จำนวน scenarios: ${category.scenarios?.length || 0}`)
   onLog(`🔁 ทดสอบซ้ำ: ${category.repeat_count || 1} ครั้ง`)
 
-  const browser = await chromium.launch({ headless: true })
+  const browser = await launchBrowser(onLog)
 
   try {
     for (let run = 0; run < (category.repeat_count || 1); run++) {
@@ -154,38 +300,22 @@ export async function runCategoryTest(category, settings, onLog) {
         const stepResults = []
 
         try {
-          await page.goto(`file://${htmlPath}`)
+          await page.setContent(htmlContent, { waitUntil: 'domcontentloaded' })
+          onLog(`  📄 โหลดหน้า widget จาก HTML ในตัวรันเนอร์`)
           onLog(`  ⏳ กำลังโหลด Webchat widget...`)
 
           // Wait for widget to load
           await page.waitForTimeout(3000)
 
-          // Try to find and click the chat toggle button if not open
-          const toggleSelectors = [
-            '.bn-chat-button',
-            '.bn-toggle',
-            '[class*="chat-button"]',
-            '[class*="toggle"]',
-            'button[class*="bn"]'
-          ]
-
-          for (const sel of toggleSelectors) {
-            try {
-              const btn = await page.$(sel)
-              if (btn) {
-                await btn.click()
-                await page.waitForTimeout(1000)
-                break
-              }
-            } catch {}
-          }
-
-          await page.waitForTimeout(2000)
-
-          // Find the chat input
-          const inputInfo = await findChatInput(page)
+          // Find the chat input (with retries because widget may load slowly)
+          const inputInfo = await waitForChatInput(page)
 
           if (!inputInfo) {
+            const debugInfo = await collectChatDiagnostics(page)
+            onLog(`  🔎 Diagnostic: frameCount=${debugInfo.frameCount}, main=${JSON.stringify(debugInfo.mainCounts)}`)
+            for (const fs of debugInfo.frameSummaries) {
+              onLog(`  🔎 Frame: ${fs.url || '(blank)'} => ${JSON.stringify(fs.counts)}`)
+            }
             onLog(`  ❌ ไม่พบ chat input สำหรับ scenario "${scenario.name}"`)
             allResults.push({
               scenario_id: scenario.id,
@@ -207,6 +337,9 @@ export async function runCategoryTest(category, settings, onLog) {
           }
 
           onLog(`  ✅ พบ chat input แล้ว`)
+          if (scenario.steps?.length) {
+            onLog(`  🔧 ใช้ข้อความแรกของ scenario เป็นการเปิดแชท`)
+          }
 
           let previousResponse = await getLastBotMessage(inputInfo.frame)
 
@@ -217,10 +350,7 @@ export async function runCategoryTest(category, settings, onLog) {
             onLog(`  💬 Step ${stepIdx + 1}: ส่ง "${step.message}"`)
 
             try {
-              const inputEl = await inputInfo.frame.$(inputInfo.selector)
-              await inputEl?.click()
-              await inputEl?.fill(step.message)
-              await inputInfo.frame.keyboard.press('Enter')
+              await sendChatMessage(inputInfo, step.message)
             } catch (e) {
               onLog(`  ⚠️  ส่งข้อความไม่สำเร็จ: ${e.message}`)
             }
@@ -287,6 +417,5 @@ export async function runCategoryTest(category, settings, onLog) {
 
   } finally {
     await browser.close()
-    try { unlinkSync(htmlPath) } catch {}
   }
 }

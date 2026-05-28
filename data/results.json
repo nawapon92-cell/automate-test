@@ -1,1 +1,179 @@
-[]
+[
+  {
+    "id": "642c11e4-d310-4471-a1e8-8f3bc5a6e0f1",
+    "category_id": "f2650235-0fb0-45e7-8053-2190e8e8d6ed",
+    "category_name": "ข้อมูลร้าน",
+    "started_at": "2026-05-28T08:56:55.009Z",
+    "completed_at": "2026-05-28T08:56:55.101Z",
+    "status": "fail",
+    "scenarios": []
+  },
+  {
+    "id": "75962741-d928-4e81-8b0e-b00da36b7c9c",
+    "category_id": "f2650235-0fb0-45e7-8053-2190e8e8d6ed",
+    "category_name": "ข้อมูลร้าน",
+    "started_at": "2026-05-28T08:57:11.205Z",
+    "completed_at": "2026-05-28T08:57:11.297Z",
+    "status": "fail",
+    "scenarios": []
+  },
+  {
+    "id": "fd3534cf-e9c3-4365-99f4-48002f57b8d0",
+    "category_id": "f2650235-0fb0-45e7-8053-2190e8e8d6ed",
+    "category_name": "ข้อมูลร้าน",
+    "started_at": "2026-05-28T09:00:17.134Z",
+    "completed_at": "2026-05-28T09:00:17.163Z",
+    "status": "fail",
+    "scenarios": []
+  },
+  {
+    "id": "bd33d820-9c5f-4627-b987-b30af9104eb9",
+    "category_id": "f2650235-0fb0-45e7-8053-2190e8e8d6ed",
+    "category_name": "ข้อมูลร้าน",
+    "started_at": "2026-05-28T09:02:14.883Z",
+    "completed_at": "2026-05-28T09:03:14.904Z",
+    "status": "fail",
+    "scenarios": [
+      {
+        "scenario_id": "88bea88f-a577-41fd-b1a7-47b307a01d84",
+        "scenario_name": "ชื่อร้าน",
+        "run_index": 0,
+        "status": "fail",
+        "steps": [
+          {
+            "step_index": 0,
+            "message_sent": "",
+            "bot_response": "Could not find chat input",
+            "expected_keywords": [],
+            "matched_keywords": [],
+            "passed": false,
+            "duration_ms": 0
+          }
+        ]
+      },
+      {
+        "scenario_id": "88bea88f-a577-41fd-b1a7-47b307a01d84",
+        "scenario_name": "ชื่อร้าน",
+        "run_index": 1,
+        "status": "fail",
+        "steps": [
+          {
+            "step_index": 0,
+            "message_sent": "",
+            "bot_response": "Could not find chat input",
+            "expected_keywords": [],
+            "matched_keywords": [],
+            "passed": false,
+            "duration_ms": 0
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "7f376ac5-8448-4514-8389-75ea21667e71",
+    "category_id": "f2650235-0fb0-45e7-8053-2190e8e8d6ed",
+    "category_name": "ข้อมูลร้าน",
+    "started_at": "2026-05-28T09:04:04.143Z",
+    "completed_at": "2026-05-28T09:05:03.329Z",
+    "status": "fail",
+    "scenarios": [
+      {
+        "scenario_id": "88bea88f-a577-41fd-b1a7-47b307a01d84",
+        "scenario_name": "ชื่อร้าน",
+        "run_index": 0,
+        "status": "fail",
+        "steps": [
+          {
+            "step_index": 0,
+            "message_sent": "",
+            "bot_response": "Could not find chat input",
+            "expected_keywords": [],
+            "matched_keywords": [],
+            "passed": false,
+            "duration_ms": 0
+          }
+        ]
+      },
+      {
+        "scenario_id": "88bea88f-a577-41fd-b1a7-47b307a01d84",
+        "scenario_name": "ชื่อร้าน",
+        "run_index": 1,
+        "status": "fail",
+        "steps": [
+          {
+            "step_index": 0,
+            "message_sent": "",
+            "bot_response": "Could not find chat input",
+            "expected_keywords": [],
+            "matched_keywords": [],
+            "passed": false,
+            "duration_ms": 0
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "beca1f99-b057-45a9-9287-8050899db08c",
+    "category_id": "f2650235-0fb0-45e7-8053-2190e8e8d6ed",
+    "category_name": "ข้อมูลร้าน",
+    "started_at": "2026-05-28T09:05:27.514Z",
+    "completed_at": "2026-05-28T09:05:27.531Z",
+    "status": "fail",
+    "scenarios": []
+  },
+  {
+    "id": "68359414-1898-4bf8-8f69-34d7d32c9246",
+    "category_id": "f2650235-0fb0-45e7-8053-2190e8e8d6ed",
+    "category_name": "ข้อมูลร้าน",
+    "started_at": "2026-05-28T09:06:04.363Z",
+    "completed_at": "2026-05-28T09:07:03.717Z",
+    "status": "fail",
+    "scenarios": [
+      {
+        "scenario_id": "88bea88f-a577-41fd-b1a7-47b307a01d84",
+        "scenario_name": "ชื่อร้าน",
+        "run_index": 0,
+        "status": "fail",
+        "steps": [
+          {
+            "step_index": 0,
+            "message_sent": "",
+            "bot_response": "Could not find chat input",
+            "expected_keywords": [],
+            "matched_keywords": [],
+            "passed": false,
+            "duration_ms": 0
+          }
+        ]
+      },
+      {
+        "scenario_id": "88bea88f-a577-41fd-b1a7-47b307a01d84",
+        "scenario_name": "ชื่อร้าน",
+        "run_index": 1,
+        "status": "fail",
+        "steps": [
+          {
+            "step_index": 0,
+            "message_sent": "",
+            "bot_response": "Could not find chat input",
+            "expected_keywords": [],
+            "matched_keywords": [],
+            "passed": false,
+            "duration_ms": 0
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "ca423048-beb9-4524-b1db-fdfa1bbf032a",
+    "category_id": "f2650235-0fb0-45e7-8053-2190e8e8d6ed",
+    "category_name": "ข้อมูลร้าน",
+    "started_at": "2026-05-28T09:10:28.393Z",
+    "completed_at": null,
+    "status": "running",
+    "scenarios": []
+  }
+]
