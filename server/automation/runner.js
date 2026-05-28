@@ -1,11 +1,5 @@
 import { chromium } from 'playwright'
-import { v4 as uuidv4 } from 'uuid'
-import { writeFileSync, existsSync, mkdirSync, unlinkSync } from 'fs'
-import { join, dirname } from 'path'
-import { fileURLToPath } from 'url'
-
-const __dirname = dirname(fileURLToPath(import.meta.url))
-const TMP_DIR = join(__dirname, '../../.tmp')
+import { createServer } from 'http'
 
 function buildHtmlPage(settings) {
   return `<!DOCTYPE html>
@@ -128,18 +122,32 @@ async function waitForBotResponse(frame, page, previousResponseText, timeoutMs =
   return ''
 }
 
+function startTempServer(html) {
+  return new Promise((resolve) => {
+    const server = createServer((req, res) => {
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' })
+      res.end(html)
+    })
+    server.listen(0, '127.0.0.1', () => {
+      resolve({ server, port: server.address().port })
+    })
+  })
+}
+
 export async function runCategoryTest(category, settings, onLog) {
   const allResults = []
-
-  if (!existsSync(TMP_DIR)) mkdirSync(TMP_DIR, { recursive: true })
-  const htmlPath = join(TMP_DIR, `test-${Date.now()}.html`)
-  writeFileSync(htmlPath, buildHtmlPage(settings))
 
   onLog(`🚀 เริ่มทดสอบ Category: "${category.name}"`)
   onLog(`📋 จำนวน scenarios: ${category.scenarios?.length || 0}`)
   onLog(`🔁 ทดสอบซ้ำ: ${category.repeat_count || 1} ครั้ง`)
 
-  const browser = await chromium.launch({ headless: true })
+  const { server, port } = await startTempServer(buildHtmlPage(settings))
+  const testUrl = `http://127.0.0.1:${port}`
+
+  const browser = await chromium.launch({
+    headless: true,
+    args: ['--ignore-certificate-errors', '--no-sandbox', '--disable-setuid-sandbox']
+  })
 
   try {
     for (let run = 0; run < (category.repeat_count || 1); run++) {
@@ -148,13 +156,13 @@ export async function runCategoryTest(category, settings, onLog) {
       for (const scenario of (category.scenarios || [])) {
         onLog(`\n📝 Scenario: "${scenario.name}"`)
 
-        const context = await browser.newContext()
+        const context = await browser.newContext({ ignoreHTTPSErrors: true })
         const page = await context.newPage()
 
         const stepResults = []
 
         try {
-          await page.goto(`file://${htmlPath}`)
+          await page.goto(testUrl)
           onLog(`  ⏳ กำลังโหลด Webchat widget...`)
 
           // Wait for widget to load
@@ -287,6 +295,6 @@ export async function runCategoryTest(category, settings, onLog) {
 
   } finally {
     await browser.close()
-    try { unlinkSync(htmlPath) } catch {}
+    server.close()
   }
 }
